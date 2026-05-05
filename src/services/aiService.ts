@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import { Piece, Player, Position, AIDifficulty, GameMode } from "../types";
+import { Piece, Player, Position, AIDifficulty, GameType } from "../types";
 import { getAllValidMoves, evaluateBoard, isValidMove } from "../gameLogic";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
@@ -7,7 +7,7 @@ const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
 export async function getAIMove(
   board: (Piece | null)[][], 
   currentPlayer: Player, 
-  mode: GameMode,
+  mode: GameType,
   difficulty: AIDifficulty
 ): Promise<{ from: Position; to: Position } | null> {
   const allMoves = getAllValidMoves(board, currentPlayer, mode);
@@ -39,7 +39,7 @@ export async function getAIMove(
 
   // HARD Difficulty: Use Gemini
   const prompt = `
-    You are a grandmaster level player at '${mode === GameMode.JUNGLE ? 'Jungle Chess' : 'Zodiac Chess'}'.
+    You are a grandmaster level player at '${mode === GameType.JUNGLE ? 'Jungle Chess' : 'Zodiac Chess'}'.
     Current Board State:
     ${JSON.stringify(board)}
     

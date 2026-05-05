@@ -1,4 +1,4 @@
-import { Position, Piece, Player, Animal, ANIMAL_RANKS, GameMode } from './types';
+import { Position, Piece, Player, Animal, ANIMAL_RANKS, GameType } from './types';
 import { RIVER_POSITIONS, TRAP_POSITIONS, DEN_POSITIONS } from './constants';
 import { canZodiacCapture } from './zodiacConstants';
 
@@ -15,8 +15,8 @@ export function isOwnDen(pos: Position, player: Player): boolean {
   return pos.row === den.row && pos.col === den.col;
 }
 
-export function canCapture(attacker: Piece, defender: Piece, attackerPos: Position, defenderPos: Position, mode: GameMode = GameMode.JUNGLE): boolean {
-  if (mode === GameMode.ZODIAC) {
+export function canCapture(attacker: Piece, defender: Piece, attackerPos: Position, defenderPos: Position, mode: GameType = GameType.JUNGLE): boolean {
+  if (mode === GameType.ZODIAC) {
     return canZodiacCapture(attacker, defender);
   }
   
@@ -61,7 +61,7 @@ export function isValidMove(
   to: Position,
   piece: Piece,
   board: (Piece | null)[][],
-  mode: GameMode = GameMode.JUNGLE
+  mode: GameType = GameType.JUNGLE
 ): boolean {
   // Check bounds
   if (to.row < 0 || to.row >= 9 || to.col < 0 || to.col >= 7) return false;
@@ -90,7 +90,7 @@ export function isValidMove(
   }
 
   // Jungle Specific: Lion/Tiger Jump over river logic
-  if (mode === GameMode.JUNGLE && (piece.animal === Animal.LION || piece.animal === Animal.TIGER)) {
+  if (mode === GameType.JUNGLE && (piece.animal === Animal.LION || piece.animal === Animal.TIGER)) {
     const isHorizontalJump = rowDiff === 0 && colDiff === 3;
     const isVerticalJump = rowDiff === 4 && colDiff === 0;
 
@@ -131,7 +131,7 @@ export function isValidMove(
   return false;
 }
 
-export function getAllValidMoves(board: (Piece | null)[][], player: Player, mode: GameMode): { from: Position; to: Position }[] {
+export function getAllValidMoves(board: (Piece | null)[][], player: Player, mode: GameType): { from: Position; to: Position }[] {
   const moves: { from: Position; to: Position }[] = [];
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 7; c++) {
@@ -156,7 +156,7 @@ export function getAllValidMoves(board: (Piece | null)[][], player: Player, mode
   return moves;
 }
 
-export function evaluateBoard(board: (Piece | null)[][], player: Player, mode: GameMode): number {
+export function evaluateBoard(board: (Piece | null)[][], player: Player, mode: GameType): number {
   let score = 0;
   const opponent = player === Player.RED ? Player.BLUE : Player.RED;
   const den = DEN_POSITIONS[opponent];

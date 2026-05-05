@@ -4,13 +4,14 @@
  */
 
 import { useState, useEffect } from 'react';
-import { Player, Piece, Animal, Position, GameMode, AIDifficulty } from './types';
+import { Player, Piece, Animal, Position, GameType, AIDifficulty } from './types';
 import { Crown, Cat, RefreshCw, LayoutGrid } from 'lucide-react';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
 import { isValidMove } from './gameLogic';
 import { getAIMove } from './services/aiService';
+import { playAnimalSound, playMoveSound, playCaptureSound } from './services/soundService';
 import { DEN_POSITIONS } from './constants';
 import { ZODIAC_INITIAL_POSITIONS } from './zodiacConstants';
 
@@ -109,8 +110,20 @@ const createInitialZodiacBoard = (): (Piece | null)[][] => {
   return board;
 };
 
+const createInitialXiangqiBoard = (): (Piece | null)[][] => {
+  return Array(10).fill(null).map(() => Array(9).fill(null));
+};
+
+const createInitialArmyChessBoard = (): (Piece | null)[][] => {
+  return Array(12).fill(null).map(() => Array(5).fill(null));
+};
+
+const createInitialLadderSnakeBoard = (): (Piece | null)[][] => {
+  return Array(10).fill(null).map(() => Array(10).fill(null));
+};
+
 export default function App() {
-  const [gameMode, setGameMode] = useState<GameMode>(GameMode.JUNGLE);
+  const [gameType, setGameType] = useState<GameType>(GameType.JUNGLE);
   const [aiDifficulty, setAIDifficulty] = useState<AIDifficulty>(AIDifficulty.MEDIUM);
   const [board, setBoard] = useState(createInitialJungleBoard);
   const [history, setHistory] = useState<(Piece | null)[][][]>([]);
@@ -125,7 +138,7 @@ export default function App() {
   useEffect(() => {
     if (isAIVsHuman && currentPlayer === Player.BLUE) {
       const timer = setTimeout(async () => {
-        const move = await getAIMove(board, currentPlayer, gameMode, aiDifficulty);
+        const move = await getAIMove(board, currentPlayer, gameType, aiDifficulty);
         if (move) {
           handleMove(move.from, move.to);
         } else {
@@ -138,7 +151,7 @@ export default function App() {
 
   const handleMove = (from: Position, to: Position) => {
     const piece = board[from.row][from.col];
-    if (piece && isValidMove(from, to, piece, board, gameMode)) {
+    if (piece && isValidMove(from, to, piece, board, gameType)) {
       setHistory([...history, board]);
       setCapturedHistory([...capturedHistory, capturedPieces]);
       
@@ -148,6 +161,9 @@ export default function App() {
       const targetPiece = newBoard[to.row][to.col];
       if (targetPiece) {
         setCapturedPieces([...capturedPieces, targetPiece]);
+        playCaptureSound();
+      } else {
+        playMoveSound();
       }
       
       // Promotion check
@@ -191,6 +207,7 @@ export default function App() {
       setSelectedPiece(null);
     } else if (piece && piece.player === currentPlayer) {
       setSelectedPiece({ row, col });
+      playAnimalSound(piece.animal);
     }
   };
 
@@ -201,7 +218,7 @@ export default function App() {
 
     for (let r = 0; r < 9; r++) {
       for (let c = 0; c < 7; c++) {
-        if (isValidMove(selectedPiece, { row: r, col: c }, piece, board, gameMode)) {
+        if (isValidMove(selectedPiece, { row: r, col: c }, piece, board, gameType)) {
           moves.push({ row: r, col: c });
         }
       }
@@ -209,10 +226,18 @@ export default function App() {
     return moves;
   })() : [];
 
-  const toggleGameMode = () => {
-    const newMode = gameMode === GameMode.JUNGLE ? GameMode.ZODIAC : GameMode.JUNGLE;
-    setGameMode(newMode);
-    setBoard(newMode === GameMode.JUNGLE ? createInitialJungleBoard() : createInitialZodiacBoard());
+  const toggleGameType = () => {
+    const types = [GameType.JUNGLE, GameType.ZODIAC, GameType.XIANGQI, GameType.LADDER_SNAKE, GameType.ARMY_CHESS];
+    const currentIndex = types.indexOf(gameType);
+    const newType = types[(currentIndex + 1) % types.length];
+    setGameType(newType);
+    setBoard(
+      newType === GameType.JUNGLE ? createInitialJungleBoard() : 
+      newType === GameType.ZODIAC ? createInitialZodiacBoard() : 
+      newType === GameType.XIANGQI ? createInitialXiangqiBoard() :
+      newType === GameType.ARMY_CHESS ? createInitialArmyChessBoard() :
+      createInitialLadderSnakeBoard()
+    );
     setHistory([]);
     setCapturedPieces([]);
     setCapturedHistory([]);
@@ -228,16 +253,16 @@ export default function App() {
             <Crown className="text-neutral-900 w-10 h-10" />
           </div>
           <h1 className="text-4xl font-bold text-amber-500 font-sans tracking-tight">
-            {gameMode === GameMode.JUNGLE ? 'Jungle Chess' : 'Zodiac Chess'}
+            {gameType === GameType.JUNGLE ? 'Jungle Chess' : gameType === GameType.ZODIAC ? 'Zodiac Chess' : gameType === GameType.XIANGQI ? 'Chinese Chess' : gameType === GameType.ARMY_CHESS ? 'Army Chess' : 'Ladder Snake'}
           </h1>
         </div>
         
         <button 
-          onClick={toggleGameMode}
+          onClick={toggleGameType}
           className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-full transition-all shadow-lg active:scale-95"
         >
-          {gameMode === GameMode.JUNGLE ? <LayoutGrid size={18} /> : <RefreshCw size={18} />}
-          Switch to {gameMode === GameMode.JUNGLE ? 'Zodiac Chess' : 'Jungle Chess'}
+          {gameType === GameType.LADDER_SNAKE ? <RefreshCw size={18} /> : <LayoutGrid size={18} />}
+          Switch Game
         </button>
 
         <div className="mt-4 flex gap-2">
@@ -257,12 +282,23 @@ export default function App() {
         </div>
       </div>
       
+      {/* Turn Indicator */}
+      <div className={`mb-6 px-8 py-3 rounded-full font-black text-lg tracking-widest uppercase shadow-lg border-2 flex items-center gap-3 ${
+        currentPlayer === Player.RED 
+          ? 'bg-red-950/50 text-red-200 border-red-500/50' 
+          : 'bg-blue-950/50 text-blue-200 border-blue-500/50'
+      }`}>
+        <div className={`w-3 h-3 rounded-full ${currentPlayer === Player.RED ? 'bg-red-500' : 'bg-blue-500'}`} />
+        {currentPlayer === Player.RED ? 'RED (Top)' : 'BLUE (Bottom)'}'s Turn
+      </div>
+      
       <BoardComponent 
         board={board} 
         onCellClick={handleCellClick} 
         currentPlayer={currentPlayer} 
         selectedPosition={selectedPiece}
         validMoves={validMoves}
+        gameType={gameType}
       />
       
       <CapturedPieces pieces={capturedPieces} />
@@ -287,7 +323,7 @@ export default function App() {
       <RulesModal 
         isOpen={isRulesOpen} 
         onClose={() => setIsRulesOpen(false)} 
-        mode={gameMode}
+        mode={gameType}
       />
     </div>
   );

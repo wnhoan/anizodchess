@@ -1,4 +1,4 @@
-import { ANIMAL_RANKS, GameMode } from '../types';
+import { ANIMAL_RANKS, GameType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Crown, Sparkles } from 'lucide-react';
 import { ZODIAC_RANKS } from '../zodiacConstants';
@@ -6,11 +6,13 @@ import { ZODIAC_RANKS } from '../zodiacConstants';
 interface RulesModalProps {
   isOpen: boolean;
   onClose: () => void;
-  mode?: GameMode;
+  mode?: GameType;
 }
 
-export default function RulesModal({ isOpen, onClose, mode = GameMode.JUNGLE }: RulesModalProps) {
-  const isZodiac = mode === GameMode.ZODIAC;
+export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: RulesModalProps) {
+  const isZodiac = mode === GameType.ZODIAC;
+  const isXiangqi = mode === GameType.XIANGQI;
+  const isLadderSnake = mode === GameType.LADDER_SNAKE;
 
   return (
     <AnimatePresence>
@@ -36,7 +38,7 @@ export default function RulesModal({ isOpen, onClose, mode = GameMode.JUNGLE }: 
             <div className="flex items-center gap-3 mb-6 relative">
               <Crown className="text-amber-500" size={32} />
               <h2 className="text-3xl font-black text-amber-500 uppercase tracking-tighter">
-                {isZodiac ? 'Zodiac Chronicles' : 'Ancient Jungle Wisdom'}
+                {isZodiac ? 'Zodiac Chronicles' : isXiangqi ? 'Xiangqi Legends' : isLadderSnake ? 'Ladder Snakes' : 'Ancient Jungle Wisdom'}
               </h2>
             </div>
 
@@ -44,7 +46,11 @@ export default function RulesModal({ isOpen, onClose, mode = GameMode.JUNGLE }: 
               <p className="text-lg leading-relaxed italic text-amber-100/70 border-l-4 border-amber-600 pl-4">
                 {isZodiac 
                   ? "Twelve spirits descend from the heavens. Only the strongest can reach the opposite palace." 
-                  : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
+                  : isXiangqi 
+                    ? "The ancient battle of the generals. Protect your King at all costs."
+                    : isLadderSnake
+                      ? "A simple race. Watch out for snakes!"
+                      : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
               </p>
               
               <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-700">

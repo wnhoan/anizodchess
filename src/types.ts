@@ -6,9 +6,12 @@ export enum Player {
   BLUE = 'BLUE',
 }
 
-export enum GameMode {
+export enum GameType {
   JUNGLE = 'JUNGLE',
   ZODIAC = 'ZODIAC',
+  XIANGQI = 'XIANGQI',
+  LADDER_SNAKE = 'LADDER_SNAKE',
+  ARMY_CHESS = 'ARMY_CHESS',
 }
 
 export enum AIDifficulty {
