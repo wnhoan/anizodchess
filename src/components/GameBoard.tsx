@@ -56,17 +56,56 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
           let bgColor = 'bg-emerald-800'; 
           
           if (gameType === GameType.JUNGLE || gameType === GameType.ZODIAC) {
-            if (isRiver(r, c)) bgColor = 'bg-blue-600';
-            else if (isTrap(r, c)) bgColor = 'bg-neutral-600';
-            else if (isDen(r, c, Player.RED)) bgColor = 'bg-red-900 ring-1 ring-red-400/30';
-            else if (isDen(r, c, Player.BLUE)) bgColor = 'bg-blue-900 ring-1 ring-blue-400/30';
+            if (isRiver(r, c)) bgColor = 'bg-blue-600/80 backdrop-blur-sm';
+            else if (isTrap(r, c)) bgColor = 'bg-neutral-600 border-2 border-dashed border-neutral-400/30';
+            else if (isDen(r, c, Player.RED)) bgColor = 'bg-red-950 ring-2 ring-red-500/50 shadow-[inset_0_0_20px_rgba(239,68,68,0.3)]';
+            else if (isDen(r, c, Player.BLUE)) bgColor = 'bg-blue-950 ring-2 ring-blue-500/50 shadow-[inset_0_0_20px_rgba(59,130,246,0.3)]';
           } else if (gameType === GameType.XIANGQI) {
-            bgColor = 'bg-amber-100 border border-amber-800';
-            // Placeholder for palace logic
-            if ((r < 3 || r > 6) && (c > 2 && c < 6)) bgColor = 'bg-amber-200';
-            if (r === 4) bgColor = 'bg-amber-100 border-t-2 border-t-amber-800 border-b-0';
+            bgColor = 'bg-[#f4d6a0] border border-[#8b4513]/30'; // Traditional wood/paper color
+            
+            // River (The Chu River and Han Border)
+            if (r === 4 || r === 5) {
+               bgColor = 'bg-[#e0c080] border-y-2 border-[#8b4513]/20';
+            }
+            
+            // Palaces (3x3 area in center of each side)
+            const isRedPalace = r >= 0 && r <= 2 && c >= 3 && c <= 5;
+            const isBluePalace = r >= 7 && r <= 9 && c >= 3 && c <= 5;
+            if (isRedPalace || isBluePalace) {
+              bgColor = 'bg-[#eec080] border-2 border-[#8b4513]/10';
+            }
+          } else if (gameType === GameType.ARMY_CHESS) {
+            bgColor = 'bg-stone-700 border border-stone-600';
+            
+            // Camps (Standard positions for Luzhanqi)
+            const isCamp = (side: number) => {
+              const base = side === 0 ? 0 : 7;
+              return (r === base + 2 && (c === 1 || c === 3)) ||
+                     (r === base + 3 && c === 2) ||
+                     (r === base + 4 && (c === 1 || c === 3));
+            };
+            
+            if (isCamp(0) || isCamp(1)) {
+              bgColor = 'bg-stone-800 rounded-full border-2 border-stone-500 shadow-inner';
+            }
+            
+            // Headquarters
+            const isHQ = (r === 0 && (c === 1 || c === 3)) || (r === 11 && (c === 1 || c === 3));
+            if (isHQ) {
+              bgColor = 'bg-stone-900 border-2 border-amber-500/30 ring-1 ring-amber-500/20';
+            }
+            
+            // Railways (Simplified)
+            const isRailway = c === 0 || c === 4 || r === 1 || r === 5 || r === 6 || r === 10;
+            if (isRailway && !isHQ && !isCamp(0) && !isCamp(1)) {
+              bgColor = 'bg-stone-600/50 border border-stone-500/30';
+            }
           } else if (gameType === GameType.LADDER_SNAKE) {
-            bgColor = (r + c) % 2 === 0 ? 'bg-amber-200' : 'bg-red-200';
+            const isEven = (r + c) % 2 === 0;
+            bgColor = isEven ? 'bg-amber-100' : 'bg-red-100';
+            
+            // Decorative accents for ladder/snake board
+            if (r % 3 === 0 && c % 3 === 0) bgColor += ' ring-1 ring-inset ring-amber-500/10';
           }
 
           const IconComponent = piece ? AnimalIconMap[piece.animal] : null;

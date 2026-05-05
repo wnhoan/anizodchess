@@ -13,6 +13,7 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
   const isZodiac = mode === GameType.ZODIAC;
   const isXiangqi = mode === GameType.XIANGQI;
   const isLadderSnake = mode === GameType.LADDER_SNAKE;
+  const isArmyChess = mode === GameType.ARMY_CHESS;
 
   return (
     <AnimatePresence>
@@ -38,7 +39,7 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
             <div className="flex items-center gap-3 mb-6 relative">
               <Crown className="text-amber-500" size={32} />
               <h2 className="text-3xl font-black text-amber-500 uppercase tracking-tighter">
-                {isZodiac ? 'Zodiac Chronicles' : isXiangqi ? 'Xiangqi Legends' : isLadderSnake ? 'Ladder Snakes' : 'Ancient Jungle Wisdom'}
+                {isZodiac ? 'Zodiac Chronicles' : isXiangqi ? 'Xiangqi Legends' : isLadderSnake ? 'Ladder Snakes' : isArmyChess ? 'Strategic Front' : 'Ancient Jungle Wisdom'}
               </h2>
             </div>
 
@@ -50,39 +51,63 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
                     ? "The ancient battle of the generals. Protect your King at all costs."
                     : isLadderSnake
                       ? "A simple race. Watch out for snakes!"
-                      : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
+                      : isArmyChess
+                        ? "Command your forces through the railways and camps. Protect the flag."
+                        : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
               </p>
               
-              <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-700">
-                <h3 className="font-bold text-white mb-3 flex items-center gap-2">
-                  <div className="w-2 h-6 bg-amber-500" />
-                  Divine Rankings:
-                </h3>
-                <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {Object.entries(isZodiac ? ZODIAC_RANKS : ANIMAL_RANKS)
-                    .sort(([, a], [, b]) => a - b)
-                    .map(([name, rank]) => (
-                      <li key={name} className="flex items-center justify-between bg-neutral-800 p-2 rounded border border-neutral-700/50 group hover:border-amber-500/50 transition-colors">
-                        <span className="text-xs font-bold text-neutral-400 uppercase">{name}</span>
-                        <span className="text-amber-500 font-mono font-bold">Lvl {rank}</span>
-                      </li>
-                    ))}
-                </ul>
-              </div>
+              {!(isLadderSnake || isArmyChess || isXiangqi) && (
+                <div className="bg-neutral-900/50 p-4 rounded-xl border border-neutral-700">
+                  <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                    <div className="w-2 h-6 bg-amber-500" />
+                    Divine Rankings:
+                  </h3>
+                  <ul className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {Object.entries(isZodiac ? ZODIAC_RANKS : ANIMAL_RANKS)
+                      .sort(([, a], [, b]) => a - b)
+                      .map(([name, rank]) => (
+                        <li key={name} className="flex items-center justify-between bg-neutral-800 p-2 rounded border border-neutral-700/50 group hover:border-amber-500/50 transition-colors">
+                          <span className="text-xs font-bold text-neutral-400 uppercase">{name}</span>
+                          <span className="text-amber-500 font-mono font-bold">Lvl {rank}</span>
+                        </li>
+                      ))}
+                  </ul>
+                </div>
+              )}
               
               <div className="space-y-3">
                 <h3 className="font-bold text-white">Combat Invariants:</h3>
                 <ul className="list-disc list-inside text-sm space-y-2 text-neutral-400">
-                  <li>Superior or equal rank captures the inferior.</li>
-                  {isZodiac ? (
-                    <li className="text-amber-300 font-medium">The Cycle: The Rat (1) outwits and captures the mighty Pig (12)!</li>
+                  {isArmyChess ? (
+                    <>
+                      <li>Higher military rank captures lower rank.</li>
+                      <li className="text-amber-300 font-medium">Camps: Safe zones where pieces cannot be captured.</li>
+                      <li>Railways: Allow rapid movement across long distances.</li>
+                    </>
+                  ) : isXiangqi ? (
+                    <>
+                      <li>Kill the General to win.</li>
+                      <li className="text-amber-300 font-medium">Palace: The General and Advisors must stay within the palace.</li>
+                      <li>River: Limits the movement of Elephants and Pawns.</li>
+                    </>
+                  ) : isZodiac ? (
+                    <>
+                      <li>Superior or equal rank captures the inferior.</li>
+                      <li className="text-amber-300 font-medium">The Cycle: The Rat (1) outwits and captures the mighty Pig (12)!</li>
+                    </>
+                  ) : isLadderSnake ? (
+                    <>
+                      <li>Race to the final square!</li>
+                      <li className="text-amber-300 font-medium">Ladders take you up, Snakes bring you down.</li>
+                    </>
                   ) : (
                     <>
+                      <li>Superior or equal rank captures the inferior.</li>
                       <li className="text-amber-300 font-medium">Special: The Mouse (1) crawls into the Elephant's (8) ear to capture it!</li>
                       <li>Water: Only Mice can enter the river. Lion and Tigers can jump over it.</li>
                     </>
                   )}
-                  <li>Den: Entering your own den is forbidden. Reaching the opponent's den wins.</li>
+                  <li>Entering your own den/HQ is usually forbidden.</li>
                 </ul>
               </div>
             </div>

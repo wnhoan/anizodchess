@@ -9,6 +9,7 @@ import { Crown, Cat, RefreshCw, LayoutGrid } from 'lucide-react';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
+import BrandLogo from './components/BrandLogo';
 import { isValidMove } from './gameLogic';
 import { getAIMove } from './services/aiService';
 import { playAnimalSound, playMoveSound, playCaptureSound } from './services/soundService';
@@ -216,8 +217,11 @@ export default function App() {
     const piece = board[selectedPiece.row][selectedPiece.col];
     if (!piece) return moves;
 
-    for (let r = 0; r < 9; r++) {
-      for (let c = 0; c < 7; c++) {
+    const rows = board.length;
+    const cols = board[0]?.length || 0;
+
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
         if (isValidMove(selectedPiece, { row: r, col: c }, piece, board, gameType)) {
           moves.push({ row: r, col: c });
         }
@@ -247,43 +251,38 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-neutral-900 flex flex-col items-center justify-center p-4">
-      <div className="flex flex-col items-center mb-8">
-        <div className="flex items-center gap-4 mb-4">
-          <div className="p-3 bg-amber-500 rounded-2xl shadow-[0_0_20px_rgba(245,158,11,0.4)]">
-            <Crown className="text-neutral-900 w-10 h-10" />
-          </div>
-          <h1 className="text-4xl font-bold text-amber-500 font-sans tracking-tight">
-            {gameType === GameType.JUNGLE ? 'Jungle Chess' : gameType === GameType.ZODIAC ? 'Zodiac Chess' : gameType === GameType.XIANGQI ? 'Chinese Chess' : gameType === GameType.ARMY_CHESS ? 'Army Chess' : 'Ladder Snake'}
-          </h1>
-        </div>
+      <div className="w-full max-w-4xl flex flex-col items-center gap-8">
+        <BrandLogo gameType={gameType} />
         
-        <button 
-          onClick={toggleGameType}
-          className="flex items-center gap-2 px-4 py-2 bg-emerald-700 hover:bg-emerald-600 text-white rounded-full transition-all shadow-lg active:scale-95"
-        >
-          {gameType === GameType.LADDER_SNAKE ? <RefreshCw size={18} /> : <LayoutGrid size={18} />}
-          Switch Game
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-4">
+          <button 
+            onClick={toggleGameType}
+            className="flex items-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-all shadow-lg active:scale-95 font-bold uppercase tracking-wider"
+          >
+            <LayoutGrid size={18} />
+            Change Game Mode
+          </button>
 
-        <div className="mt-4 flex gap-2">
-          {Object.values(AIDifficulty).map((level) => (
-            <button
-              key={level}
-              onClick={() => setAIDifficulty(level)}
-              className={`px-3 py-1 rounded-md text-xs font-bold transition-all ${
-                aiDifficulty === level 
-                  ? 'bg-amber-500 text-neutral-900 shadow-[0_0_10px_rgba(245,158,11,0.5)]' 
-                  : 'bg-neutral-800 text-neutral-400 hover:bg-neutral-700'
-              }`}
-            >
-              {level}
-            </button>
-          ))}
+          <div className="flex gap-2 p-1 bg-neutral-800 rounded-xl border border-neutral-700">
+            {Object.values(AIDifficulty).map((level) => (
+              <button
+                key={level}
+                onClick={() => setAIDifficulty(level)}
+                className={`px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-tighter ${
+                  aiDifficulty === level 
+                    ? 'bg-amber-500 text-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                    : 'bg-transparent text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+                }`}
+              >
+                {level}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
       
       {/* Turn Indicator */}
-      <div className={`mb-6 px-8 py-3 rounded-full font-black text-lg tracking-widest uppercase shadow-lg border-2 flex items-center gap-3 ${
+      <div className={`mt-8 mb-6 px-10 py-4 rounded-2xl font-black text-xl tracking-[0.2em] uppercase shadow-2xl border-2 flex items-center gap-4 transition-all duration-500 ${
         currentPlayer === Player.RED 
           ? 'bg-red-950/50 text-red-200 border-red-500/50' 
           : 'bg-blue-950/50 text-blue-200 border-blue-500/50'
