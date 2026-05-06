@@ -6,6 +6,7 @@
 import { useState, useEffect } from 'react';
 import { Player, Piece, Animal, Position, GameType, AIDifficulty } from './types';
 import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu, Volume2, VolumeX } from 'lucide-react';
+import { motion } from 'motion/react';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
@@ -186,6 +187,30 @@ const createInitialLadderSnakeBoard = (): (Piece | null)[][] => {
   board[9][9] = { id: 'BLUE-RUNNER', animal: Animal.CAT, player: Player.BLUE };
   return board;
 };
+ 
+const createInitialChessBoard = (): (Piece | null)[][] => {
+  const board: (Piece | null)[][] = Array(8).fill(null).map(() => Array(8).fill(null));
+  
+  const setupPieces = (row: number, player: Player) => {
+    board[row][0] = { id: `${player}-C_ROOK-1`, animal: Animal.C_ROOK, player };
+    board[row][7] = { id: `${player}-C_ROOK-2`, animal: Animal.C_ROOK, player };
+    board[row][1] = { id: `${player}-C_KNIGHT-1`, animal: Animal.C_KNIGHT, player };
+    board[row][6] = { id: `${player}-C_KNIGHT-2`, animal: Animal.C_KNIGHT, player };
+    board[row][2] = { id: `${player}-C_BISHOP-1`, animal: Animal.C_BISHOP, player };
+    board[row][5] = { id: `${player}-C_BISHOP-2`, animal: Animal.C_BISHOP, player };
+    board[row][3] = { id: `${player}-C_QUEEN`, animal: Animal.C_QUEEN, player };
+    board[row][4] = { id: `${player}-C_KING`, animal: Animal.C_KING, player };
+    
+    const pawnRow = player === Player.RED ? row + 1 : row - 1;
+    for (let i = 0; i < 8; i++) {
+      board[pawnRow][i] = { id: `${player}-C_PAWN-${i}`, animal: Animal.C_PAWN, player };
+    }
+  };
+
+  setupPieces(0, Player.RED);
+  setupPieces(7, Player.BLUE);
+  return board;
+};
 
 export default function App() {
   const [gameType, setGameType] = useState<GameType>(GameType.JUNGLE);
@@ -201,6 +226,8 @@ export default function App() {
   const [diceValue, setDiceValue] = useState(1);
   const [isRolling, setIsRolling] = useState(false);
   const [isSoundOn, setIsSoundOn] = useState(false);
+  const [playerPositions, setPlayerPositions] = useState<Record<Player, number>>({ [Player.RED]: 1, [Player.BLUE]: 100 }); // BLUE starts at 100 or 1? Usually both start at 1. Wait, let's look at initial board.
+  const [prevPlayerPositions, setPrevPlayerPositions] = useState<Record<Player, number>>({ [Player.RED]: 1, [Player.BLUE]: 1 });
 
   // Initialize sound state in service
   useEffect(() => {
@@ -233,7 +260,7 @@ export default function App() {
     // Simulate roll animation
     await new Promise(resolve => setTimeout(resolve, 800));
     
-    const roll = Math.floor(Math.random() * 6) + 1;
+    const roll = Math.floor(Math.random() * 9) + 1;
     setDiceValue(roll);
     setIsRolling(false);
     
@@ -255,6 +282,7 @@ export default function App() {
     if (!currentPos) return;
     
     const currentSquare = getSquareForPosition(currentPos.row, currentPos.col);
+    setPrevPlayerPositions(prev => ({ ...prev, [currentPlayer]: currentSquare }));
     let targetSquare = currentSquare + steps;
     
     // Win condition: must reach 100
@@ -291,12 +319,36 @@ export default function App() {
     
     const finalPos = getPositionForSquare(targetSquare);
     
-    // Check for another piece in that spot (PvP)
-    // In Snake & Ladder, multiple pieces can be on same spot? 
-    // Usually yes, but for this simple board, let's bump the other piece?
-    // Let's just allow overlap if I had multiple pieces, but here we only have 1 piece per cell.
-    // If target cell has opponent, we can move the opponent slightly? 
-    // For now, let's just replace visual and handle logic simply.
+    // Kick-back logic: check if opponent is at targetSquare
+    const opponent = currentPlayer === Player.RED ? Player.BLUE : Player.RED;
+    let opponentPos: Position | null = null;
+    for (let r = 0; r < 10; r++) {
+      for (let c = 0; c < 10; c++) {
+        if (newBoard[r][c]?.player === opponent) {
+          const occSquare = getSquareForPosition(r, c);
+          if (occSquare === targetSquare) {
+            opponentPos = { row: r, col: c };
+          }
+        }
+      }
+    }
+
+    if (opponentPos) {
+      // Move opponent back to their previous position
+      const backSquare = prevPlayerPositions[opponent];
+      const backPos = getPositionForSquare(backSquare);
+      const opponentPiece = newBoard[opponentPos.row][opponentPos.col];
+      newBoard[opponentPos.row][opponentPos.col] = null;
+      // Ensure we don't overwrite the current player's piece if backPos is targetPos (unlikely but safe)
+      if (newBoard[backPos.row][backPos.col] === null) {
+        newBoard[backPos.row][backPos.col] = opponentPiece;
+      } else {
+        // Find nearest empty if occupied? Usually in Snake game we just stack or kick. 
+        // User said "kick back to last position".
+        newBoard[backPos.row][backPos.col] = opponentPiece;
+      }
+      console.log(`${opponent} kicked back to ${backSquare}`);
+    }
     
     newBoard[finalPos.row][finalPos.col] = piece;
     setBoard(newBoard);
@@ -352,6 +404,9 @@ export default function App() {
       // Win conditions
       if (gameType === GameType.XIANGQI && targetPiece?.animal === Animal.X_GENERAL) {
          alert(`${piece.player} Wins! The Enemy General has fallen.`);
+      }
+      if (gameType === GameType.CHESS && targetPiece?.animal === Animal.C_KING) {
+         alert(`${piece.player} Wins! Checkmate. The King has been captured.`);
       }
       if (gameType === GameType.ARMY_CHESS && targetPiece?.animal === Animal.A_FLAG) {
          alert(`${piece.player} Wins! The Enemy Flag has been captured.`);
@@ -420,8 +475,25 @@ export default function App() {
     return moves;
   })() : [];
 
+  const resetGame = () => {
+    setBoard(
+      gameType === GameType.JUNGLE ? createInitialJungleBoard() : 
+      gameType === GameType.ZODIAC ? createInitialZodiacBoard() : 
+      gameType === GameType.XIANGQI ? createInitialXiangqiBoard() :
+      gameType === GameType.ARMY_CHESS ? createInitialArmyChessBoard() :
+      gameType === GameType.CHESS ? createInitialChessBoard() :
+      createInitialLadderSnakeBoard()
+    );
+    setHistory([]);
+    setCapturedPieces([]);
+    setCapturedHistory([]);
+    setSelectedPiece(null);
+    setCurrentPlayer(Player.RED);
+    setPrevPlayerPositions({ [Player.RED]: 1, [Player.BLUE]: 100 }); // Default starting spots
+  };
+
   const toggleGameType = () => {
-    const types = [GameType.JUNGLE, GameType.ZODIAC, GameType.XIANGQI, GameType.LADDER_SNAKE, GameType.ARMY_CHESS];
+    const types = [GameType.JUNGLE, GameType.ZODIAC, GameType.XIANGQI, GameType.LADDER_SNAKE, GameType.ARMY_CHESS, GameType.CHESS];
     const currentIndex = types.indexOf(gameType);
     const newType = types[(currentIndex + 1) % types.length];
     setGameType(newType);
@@ -430,6 +502,7 @@ export default function App() {
       newType === GameType.ZODIAC ? createInitialZodiacBoard() : 
       newType === GameType.XIANGQI ? createInitialXiangqiBoard() :
       newType === GameType.ARMY_CHESS ? createInitialArmyChessBoard() :
+      newType === GameType.CHESS ? createInitialChessBoard() :
       createInitialLadderSnakeBoard()
     );
     setHistory([]);
@@ -437,6 +510,7 @@ export default function App() {
     setCapturedHistory([]);
     setSelectedPiece(null);
     setCurrentPlayer(Player.RED);
+    setPrevPlayerPositions({ [Player.RED]: 1, [Player.BLUE]: 100 });
   };
 
   return (
@@ -531,19 +605,31 @@ export default function App() {
         </div>
       )}
 
-      <BoardComponent 
-        board={board} 
-        onCellClick={handleCellClick} 
-        currentPlayer={currentPlayer} 
-        selectedPosition={selectedPiece}
-        validMoves={validMoves}
-        gameType={gameType}
-      />
+      <motion.div 
+        animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
+        transition={{ duration: 0.8, type: 'spring', stiffness: 50 }}
+        className="relative shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-3xl overflow-hidden"
+      >
+        <BoardComponent 
+          board={board} 
+          onCellClick={handleCellClick} 
+          currentPlayer={currentPlayer} 
+          selectedPosition={selectedPiece}
+          validMoves={validMoves}
+          gameType={gameType}
+        />
+      </motion.div>
       
       <CapturedPieces pieces={capturedPieces} />
       
       <div className="mt-8 flex gap-4 items-center">
         <div className="text-white text-lg">Current Player: <span className="font-bold">{currentPlayer}</span></div>
+        <button 
+          onClick={resetGame}
+          className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-amber-300 rounded-lg border border-neutral-600"
+        >
+          New Game
+        </button>
         <button 
           onClick={() => setIsRulesOpen(true)}
           className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-amber-300 rounded-lg border border-neutral-600"

@@ -14,6 +14,7 @@ export default function BrandLogo({ gameType }: BrandLogoProps) {
       case GameType.XIANGQI: return <Shield size={32} className="text-red-500" />;
       case GameType.ARMY_CHESS: return <Shield size={32} className="text-stone-400" />;
       case GameType.LADDER_SNAKE: return <Flame size={32} className="text-orange-500" />;
+      case GameType.CHESS: return <Crown size={32} className="text-white" />;
       default: return <Crown size={32} className="text-amber-500" />;
     }
   };
@@ -25,6 +26,7 @@ export default function BrandLogo({ gameType }: BrandLogoProps) {
       case GameType.XIANGQI: return 'Chinese Chess';
       case GameType.ARMY_CHESS: return 'Army Chess';
       case GameType.LADDER_SNAKE: return 'Ladder Snake';
+      case GameType.CHESS: return 'Grand Chess';
       default: return 'Grand Chess';
     }
   };
@@ -36,6 +38,7 @@ export default function BrandLogo({ gameType }: BrandLogoProps) {
       case GameType.XIANGQI: return 'The Ancient Battlefield';
       case GameType.ARMY_CHESS: return 'The Strategic Front';
       case GameType.LADDER_SNAKE: return 'The Race to Infinity';
+      case GameType.CHESS: return 'The Royal Strategy';
       default: return 'Master the Board';
     }
   };

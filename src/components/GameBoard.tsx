@@ -2,7 +2,8 @@ import React, { ElementType } from 'react';
 import { 
   Mouse, Cat, Dog, Sparkle, Zap, Crown, Circle, Bird, Flame, Smile, Move, Ghost, Rabbit, Rat,
   Flag, Shield, Swords, Target, User, Users, Anchor, Bomb, Construction, Trophy,
-  CircleDot
+  CircleDot,
+  Castle, Crosshair
 } from 'lucide-react';
 import { Piece, Player, Animal, Position, GameType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
@@ -52,6 +53,14 @@ const AnimalIconMap: Record<Animal, ElementType> = {
   [Animal.A_BOMB]: Bomb,
   [Animal.A_MINE]: Zap,
   [Animal.A_FLAG]: Flag,
+
+  // Western Chess Pieces
+  [Animal.C_KING]: Crown,
+  [Animal.C_QUEEN]: Sparkle,
+  [Animal.C_ROOK]: Castle,
+  [Animal.C_BISHOP]: Crosshair,
+  [Animal.C_KNIGHT]: Move,
+  [Animal.C_PAWN]: Circle,
 };
 
 interface BoardProps {
@@ -128,6 +137,8 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
             if (isRailway && !isHQ && !isCamp(0) && !isCamp(1)) {
               bgColor = 'bg-stone-600/50 border border-stone-500/30';
             }
+          } else if (gameType === GameType.CHESS) {
+            bgColor = (r + c) % 2 === 0 ? 'bg-[#eeeed2]' : 'bg-[#769656]';
           } else if (gameType === GameType.LADDER_SNAKE) {
             const isEven = (r + c) % 2 === 0;
             bgColor = isEven ? 'bg-amber-100' : 'bg-red-100';
@@ -153,16 +164,22 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
             >
               {/* Square Numbers for Snakes & Ladders */}
               {squareNumber && (
-                <span className="absolute top-0.5 left-1 text-[8px] font-mono font-bold text-neutral-800/40">
+                <motion.span 
+                  animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
+                  className="absolute top-0.5 left-1 text-[8px] font-mono font-bold text-neutral-800/40"
+                >
                   {squareNumber}
-                </span>
+                </motion.span>
               )}
 
               {/* Shortcut Hints */}
               {isShortcut && (
-                <div className={`absolute bottom-0.5 right-1 ${isUp ? 'text-emerald-600' : 'text-red-500'} opacity-60`}>
+                <motion.div 
+                  animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
+                  className={`absolute bottom-0.5 right-1 ${isUp ? 'text-emerald-600' : 'text-red-500'} opacity-60`}
+                >
                   {isUp ? <Move size={10} className="-rotate-45" /> : <Move size={10} className="rotate-135" />}
-                </div>
+                </motion.div>
               )}
               
               {/* Special markers */}
@@ -174,7 +191,12 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
                   <motion.div
                     layoutId={piece.id}
                     initial={{ opacity: 0, scale: 0.5, y: -20 }}
-                    animate={{ opacity: 1, scale: piece.player === currentPlayer ? 1.1 : 1, y: 0 }}
+                    animate={{ 
+                      opacity: 1, 
+                      scale: piece.player === currentPlayer ? 1.1 : 1, 
+                      y: 0,
+                      rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0
+                    }}
                     exit={{ 
                       opacity: 0, 
                       scale: 2,

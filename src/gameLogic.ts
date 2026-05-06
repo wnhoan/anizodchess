@@ -44,6 +44,10 @@ export function canCapture(attacker: Piece, defender: Piece, attackerPos: Positi
     
     return ANIMAL_RANKS[attacker.animal] >= ANIMAL_RANKS[defender.animal];
   }
+
+  if (mode === GameType.CHESS) {
+    return attacker.player !== defender.player;
+  }
   
   // Jungle Capture Rules
   // If defender is in their own trap (WAIT, actually it is IF defender is in OPPONENT'S trap)
@@ -255,6 +259,59 @@ export function isValidMove(
     return dist < 4; // Simplified movement for now
   }
 
+  // Western Chess Logic
+  if (mode === GameType.CHESS) {
+    if (targetPiece?.player === piece.player) return false;
+    const dr = to.row - from.row;
+    const dc = to.col - from.col;
+    const absDr = Math.abs(dr);
+    const absDc = Math.abs(dc);
+
+    switch (piece.animal) {
+      case Animal.C_KING:
+        return absDr <= 1 && absDc <= 1;
+      case Animal.C_QUEEN:
+        if (absDr !== absDc && dr !== 0 && dc !== 0) return false;
+        // Check clear path
+        const stepR = dr === 0 ? 0 : dr / absDr;
+        const stepC = dc === 0 ? 0 : dc / absDc;
+        for (let r = from.row + stepR, c = from.col + stepC; r !== to.row || c !== to.col; r += stepR, c += stepC) {
+          if (board[r][c]) return false;
+        }
+        return true;
+      case Animal.C_ROOK:
+        if (dr !== 0 && dc !== 0) return false;
+        // Check clear path
+        const sR = dr === 0 ? 0 : dr / absDr;
+        const sC = dc === 0 ? 0 : dc / absDc;
+        for (let r = from.row + sR, c = from.col + sC; r !== to.row || c !== to.col; r += sR, c += sC) {
+          if (board[r][c]) return false;
+        }
+        return true;
+      case Animal.C_BISHOP:
+        if (absDr !== absDc) return false;
+        const bsR = dr / absDr;
+        const bsC = dc / absDc;
+        for (let r = from.row + bsR, c = from.col + bsC; r !== to.row || c !== to.col; r += bsR, c += bsC) {
+          if (board[r][c]) return false;
+        }
+        return true;
+      case Animal.C_KNIGHT:
+        return (absDr === 2 && absDc === 1) || (absDr === 1 && absDc === 2);
+      case Animal.C_PAWN:
+        const direction = piece.player === Player.RED ? 1 : -1;
+        const startRow = piece.player === Player.RED ? 1 : 6;
+        
+        // Single move forward
+        if (dc === 0 && dr === direction && !targetPiece) return true;
+        // Double move forward from start
+        if (dc === 0 && dr === 2 * direction && from.row === startRow && !targetPiece && !board[from.row + direction][from.col]) return true;
+        // Capture
+        if (absDc === 1 && dr === direction && targetPiece) return true;
+        return false;
+    }
+  }
+
   // Normal move
   if ((rowDiff === 1 && colDiff === 0) || (rowDiff === 0 && colDiff === 1)) {
     // Check water restriction
@@ -340,6 +397,14 @@ export function getAllValidMoves(board: (Piece | null)[][], player: Player, mode
            // Railway lines
            for (let dr = 0; dr < rows; dr++) moves.push({ from: { row: r, col: c }, to: { row: dr, col: c } });
            for (let dc = 0; dc < cols; dc++) moves.push({ from: { row: r, col: c }, to: { row: r, col: dc } });
+        } else if (mode === GameType.CHESS && (piece.animal === Animal.C_QUEEN || piece.animal === Animal.C_ROOK || piece.animal === Animal.C_BISHOP)) {
+           // Ray casting for slider pieces
+           for (let dr = 0; dr < rows; dr++) moves.push({ from: { row: r, col: c }, to: { row: dr, col: c } });
+           for (let dc = 0; dc < cols; dc++) moves.push({ from: { row: r, col: c }, to: { row: r, col: dc } });
+           for (let dr = 0; dr < rows; dr++) {
+             moves.push({ from: { row: r, col: c }, to: { row: dr, col: c + (dr - r) } });
+             moves.push({ from: { row: r, col: c }, to: { row: dr, col: c - (dr - r) } });
+           }
         }
 
         for (const dir of directions) {
@@ -370,6 +435,7 @@ export function evaluateBoard(board: (Piece | null)[][], player: Player, mode: G
         
         // Win condition bonus
         if (mode === GameType.XIANGQI && piece.animal === Animal.X_GENERAL) val = 10000;
+        if (mode === GameType.CHESS && piece.animal === Animal.C_KING) val = 10000;
         if (mode === GameType.ARMY_CHESS && piece.animal === Animal.A_FLAG) val = 1000;
 
         if (piece.player === player) {

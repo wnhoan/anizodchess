@@ -14,6 +14,7 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
   const isXiangqi = mode === GameType.XIANGQI;
   const isLadderSnake = mode === GameType.LADDER_SNAKE;
   const isArmyChess = mode === GameType.ARMY_CHESS;
+  const isChess = mode === GameType.CHESS;
 
   return (
     <AnimatePresence>
@@ -39,7 +40,7 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
             <div className="flex items-center gap-3 mb-6 relative">
               <Crown className="text-amber-500" size={32} />
               <h2 className="text-3xl font-black text-amber-500 uppercase tracking-tighter">
-                {isZodiac ? 'Zodiac Chronicles' : isXiangqi ? 'Xiangqi Legends' : isLadderSnake ? 'Ladder Snakes' : isArmyChess ? 'Strategic Front' : 'Ancient Jungle Wisdom'}
+                {isZodiac ? 'Zodiac Chronicles' : isXiangqi ? 'Xiangqi Legends' : isLadderSnake ? 'Ladder Snakes' : isArmyChess ? 'Strategic Front' : isChess ? 'Royal Strategy' : 'Ancient Jungle Wisdom'}
               </h2>
             </div>
 
@@ -53,7 +54,9 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
                       ? "A simple race. Watch out for snakes!"
                       : isArmyChess
                         ? "Command your forces through the railways and camps. Protect the flag."
-                        : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
+                        : isChess
+                          ? "The classic game of chess. Checkmate the King to win."
+                          : "Within the dense jungle, hierarchy is absolute. Move your forces to the heart of the enemy den."}
               </p>
               
               {!(isLadderSnake || isArmyChess || isXiangqi) && (
@@ -94,6 +97,12 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
                     <>
                       <li>Superior or equal rank captures the inferior.</li>
                       <li className="text-amber-300 font-medium">The Cycle: The Rat (1) outwits and captures the mighty Pig (12)!</li>
+                    </>
+                  ) : isChess ? (
+                    <>
+                      <li>Checkmate the King to win.</li>
+                      <li className="text-amber-300 font-medium">Strategy: Pawns move differently when capturing.</li>
+                      <li>Pieces have unique move patterns (Rooks, Bishops, etc).</li>
                     </>
                   ) : isLadderSnake ? (
                     <>

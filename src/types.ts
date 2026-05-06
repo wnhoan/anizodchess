@@ -12,6 +12,7 @@ export enum GameType {
   XIANGQI = 'XIANGQI',
   LADDER_SNAKE = 'LADDER_SNAKE',
   ARMY_CHESS = 'ARMY_CHESS',
+  CHESS = 'CHESS',
 }
 
 export enum AIDifficulty {
@@ -65,6 +66,14 @@ export enum Animal {
   A_BOMB = 'A_BOMB',
   A_MINE = 'A_MINE',
   A_FLAG = 'A_FLAG',
+
+  // Western Chess Pieces
+  C_KING = 'C_KING',
+  C_QUEEN = 'C_QUEEN',
+  C_ROOK = 'C_ROOK',
+  C_BISHOP = 'C_BISHOP',
+  C_KNIGHT = 'C_KNIGHT',
+  C_PAWN = 'C_PAWN',
 }
 
 export const ANIMAL_RANKS: Record<Animal, number> = {
@@ -111,6 +120,14 @@ export const ANIMAL_RANKS: Record<Animal, number> = {
   [Animal.A_BOMB]: 0, // Captures anything but dies
   [Animal.A_MINE]: 0, // Higher captures except engineer/bomb
   [Animal.A_FLAG]: 0,
+
+  // Western Chess Ranks
+  [Animal.C_KING]: 100,
+  [Animal.C_QUEEN]: 9,
+  [Animal.C_ROOK]: 5,
+  [Animal.C_BISHOP]: 3,
+  [Animal.C_KNIGHT]: 3,
+  [Animal.C_PAWN]: 1,
 };
 
 export interface Piece {

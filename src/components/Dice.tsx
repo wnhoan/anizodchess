@@ -12,40 +12,28 @@ interface DiceProps {
 }
 
 export default function Dice({ value, isRolling, onRoll, disabled }: DiceProps) {
-  const getIcon = () => {
-    switch (value) {
-      case 1: return <Dice1 size={48} />;
-      case 2: return <Dice2 size={48} />;
-      case 3: return <Dice3 size={48} />;
-      case 4: return <Dice4 size={48} />;
-      case 5: return <Dice5 size={48} />;
-      case 6: return <Dice6 size={48} />;
-      default: return <Dice1 size={48} />;
-    }
-  };
-
   return (
     <div className="flex flex-col items-center gap-4">
       <motion.div
         animate={isRolling ? { 
           rotate: [0, 90, 180, 270, 360],
-          scale: [1, 1.1, 1],
+          scale: [1.1, 0.9, 1.1],
         } : {}}
         transition={isRolling ? { 
           repeat: Infinity, 
-          duration: 0.2,
+          duration: 0.15,
           ease: "linear"
         } : {}}
-        className={`p-4 bg-white rounded-2xl shadow-xl text-neutral-900 ${isRolling ? 'text-amber-500' : ''}`}
+        className={`w-20 h-20 flex items-center justify-center bg-white rounded-2xl shadow-xl text-neutral-900 border-4 ${isRolling ? 'border-amber-500 text-amber-500' : 'border-neutral-200'}`}
       >
-        {getIcon()}
+        <span className="text-4xl font-black">{value}</span>
       </motion.div>
       <button
         onClick={onRoll}
         disabled={disabled || isRolling}
-        className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-neutral-900 font-black rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest"
+        className="px-8 py-3 bg-amber-500 hover:bg-amber-400 text-neutral-900 font-black rounded-xl shadow-lg transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-widest text-sm"
       >
-        {isRolling ? 'Rolling...' : 'Roll Dice'}
+        {isRolling ? 'Rolling...' : 'Roll Dice (1-9)'}
       </button>
     </div>
   );
