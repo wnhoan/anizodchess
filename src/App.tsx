@@ -5,7 +5,7 @@
 
 import { useState, useEffect } from 'react';
 import { Player, Piece, Animal, Position, GameType, AIDifficulty } from './types';
-import { Crown, Cat, RefreshCw, LayoutGrid } from 'lucide-react';
+import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu } from 'lucide-react';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
@@ -255,6 +255,31 @@ export default function App() {
         <BrandLogo gameType={gameType} />
         
         <div className="flex flex-wrap items-center justify-center gap-4">
+          <div className="flex gap-2 p-1 bg-neutral-800 rounded-xl border border-neutral-700">
+            <button
+              onClick={() => setIsAIVsHuman(true)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-tighter ${
+                isAIVsHuman 
+                  ? 'bg-amber-500 text-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                  : 'bg-transparent text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+              }`}
+            >
+              <Cpu size={14} />
+              VS AI
+            </button>
+            <button
+              onClick={() => setIsAIVsHuman(false)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-tighter ${
+                !isAIVsHuman 
+                  ? 'bg-amber-500 text-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                  : 'bg-transparent text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+              }`}
+            >
+              <Users size={14} />
+              PvP
+            </button>
+          </div>
+
           <button 
             onClick={toggleGameType}
             className="flex items-center gap-2 px-6 py-3 bg-emerald-700 hover:bg-emerald-600 text-white rounded-xl transition-all shadow-lg active:scale-95 font-bold uppercase tracking-wider"
@@ -263,21 +288,23 @@ export default function App() {
             Change Game Mode
           </button>
 
-          <div className="flex gap-2 p-1 bg-neutral-800 rounded-xl border border-neutral-700">
-            {Object.values(AIDifficulty).map((level) => (
-              <button
-                key={level}
-                onClick={() => setAIDifficulty(level)}
-                className={`px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-tighter ${
-                  aiDifficulty === level 
-                    ? 'bg-amber-500 text-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
-                    : 'bg-transparent text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
-                }`}
-              >
-                {level}
-              </button>
-            ))}
-          </div>
+          {isAIVsHuman && (
+            <div className="flex gap-2 p-1 bg-neutral-800 rounded-xl border border-neutral-700">
+              {Object.values(AIDifficulty).map((level) => (
+                <button
+                  key={level}
+                  onClick={() => setAIDifficulty(level)}
+                  className={`px-4 py-2 rounded-lg text-xs font-black transition-all uppercase tracking-tighter ${
+                    aiDifficulty === level 
+                      ? 'bg-amber-500 text-neutral-900 shadow-[0_0_15px_rgba(245,158,11,0.4)]' 
+                      : 'bg-transparent text-neutral-500 hover:bg-neutral-700 hover:text-neutral-300'
+                  }`}
+                >
+                  {level}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
@@ -312,7 +339,7 @@ export default function App() {
         </button>
         <button 
           onClick={undoMove}
-          disabled={currentPlayer === Player.BLUE || history.length === 0}
+          disabled={history.length === 0 || (isAIVsHuman && currentPlayer === Player.BLUE)}
           className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 text-amber-300 rounded-lg border border-neutral-600 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           Undo Move
