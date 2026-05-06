@@ -42,6 +42,29 @@ export enum Animal {
   MONKEY = 'MONKEY',
   ROOSTER = 'ROOSTER',
   PIG = 'PIG',
+  
+  // Xiangqi Pieces
+  X_GENERAL = 'X_GENERAL',
+  X_ADVISOR = 'X_ADVISOR',
+  X_ELEPHANT = 'X_ELEPHANT',
+  X_HORSE = 'X_HORSE',
+  X_CHARIOT = 'X_CHARIOT',
+  X_CANNON = 'X_CANNON',
+  X_SOLDIER = 'X_SOLDIER',
+
+  // Army Chess Pieces
+  A_MARSHAL = 'A_MARSHAL',
+  A_GENERAL = 'A_GENERAL',
+  A_LIEUTENANT_GENERAL = 'A_LIEUTENANT_GENERAL',
+  A_BRIGADIER = 'A_BRIGADIER',
+  A_COLONEL = 'A_COLONEL',
+  A_MAJOR = 'A_MAJOR',
+  A_CAPTAIN = 'A_CAPTAIN',
+  A_LIEUTENANT = 'A_LIEUTENANT',
+  A_ENGINEER = 'A_ENGINEER',
+  A_BOMB = 'A_BOMB',
+  A_MINE = 'A_MINE',
+  A_FLAG = 'A_FLAG',
 }
 
 export const ANIMAL_RANKS: Record<Animal, number> = {
@@ -64,7 +87,30 @@ export const ANIMAL_RANKS: Record<Animal, number> = {
   [Animal.MONKEY]: 9,
   [Animal.ROOSTER]: 10,
   [Animal.PIG]: 12,
-  [Animal.DRAGON]: 11, // Dragon is high rank in Zodiac
+  [Animal.DRAGON]: 11,
+
+  // Xiangqi Ranks (Used for capturing/AI evaluation)
+  [Animal.X_GENERAL]: 100,
+  [Animal.X_ADVISOR]: 2,
+  [Animal.X_ELEPHANT]: 2,
+  [Animal.X_HORSE]: 4,
+  [Animal.X_CHARIOT]: 9,
+  [Animal.X_CANNON]: 4.5,
+  [Animal.X_SOLDIER]: 1,
+
+  // Army Chess Ranks (Higher captures lower)
+  [Animal.A_MARSHAL]: 9,
+  [Animal.A_GENERAL]: 8,
+  [Animal.A_LIEUTENANT_GENERAL]: 7,
+  [Animal.A_BRIGADIER]: 6,
+  [Animal.A_COLONEL]: 5,
+  [Animal.A_MAJOR]: 4,
+  [Animal.A_CAPTAIN]: 3,
+  [Animal.A_LIEUTENANT]: 2,
+  [Animal.A_ENGINEER]: 1,
+  [Animal.A_BOMB]: 0, // Captures anything but dies
+  [Animal.A_MINE]: 0, // Higher captures except engineer/bomb
+  [Animal.A_FLAG]: 0,
 };
 
 export interface Piece {

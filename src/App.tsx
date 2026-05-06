@@ -5,16 +5,18 @@
 
 import { useState, useEffect } from 'react';
 import { Player, Piece, Animal, Position, GameType, AIDifficulty } from './types';
-import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu } from 'lucide-react';
+import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu, Volume2, VolumeX } from 'lucide-react';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
 import BrandLogo from './components/BrandLogo';
 import { isValidMove } from './gameLogic';
 import { getAIMove } from './services/aiService';
-import { playAnimalSound, playMoveSound, playCaptureSound } from './services/soundService';
+import { playAnimalSound, playMoveSound, playCaptureSound, setSoundEnabled } from './services/soundService';
 import { DEN_POSITIONS } from './constants';
 import { ZODIAC_INITIAL_POSITIONS } from './zodiacConstants';
+import { LADDER_SNAKE_MAP, getPositionForSquare, getSquareForPosition } from './snakeLadderConstants';
+import Dice from './components/Dice';
 
 // Helper to shuffle an array
 const shuffle = <T,>(array: T[]): T[] => {
@@ -112,15 +114,77 @@ const createInitialZodiacBoard = (): (Piece | null)[][] => {
 };
 
 const createInitialXiangqiBoard = (): (Piece | null)[][] => {
-  return Array(10).fill(null).map(() => Array(9).fill(null));
+  const board: (Piece | null)[][] = Array(10).fill(null).map(() => Array(9).fill(null));
+  
+  const setupRow = (row: number, player: Player) => {
+    board[row][0] = { id: `${player}-X_CHARIOT-1`, animal: Animal.X_CHARIOT, player };
+    board[row][8] = { id: `${player}-X_CHARIOT-2`, animal: Animal.X_CHARIOT, player };
+    board[row][1] = { id: `${player}-X_HORSE-1`, animal: Animal.X_HORSE, player };
+    board[row][7] = { id: `${player}-X_HORSE-2`, animal: Animal.X_HORSE, player };
+    board[row][2] = { id: `${player}-X_ELEPHANT-1`, animal: Animal.X_ELEPHANT, player };
+    board[row][6] = { id: `${player}-X_ELEPHANT-2`, animal: Animal.X_ELEPHANT, player };
+    board[row][3] = { id: `${player}-X_ADVISOR-1`, animal: Animal.X_ADVISOR, player };
+    board[row][5] = { id: `${player}-X_ADVISOR-2`, animal: Animal.X_ADVISOR, player };
+    board[row][4] = { id: `${player}-X_GENERAL`, animal: Animal.X_GENERAL, player };
+  };
+
+  setupRow(0, Player.RED);
+  setupRow(9, Player.BLUE);
+
+  // Cannons
+  board[2][1] = { id: `RED-X_CANNON-1`, animal: Animal.X_CANNON, player: Player.RED };
+  board[2][7] = { id: `RED-X_CANNON-2`, animal: Animal.X_CANNON, player: Player.RED };
+  board[7][1] = { id: `BLUE-X_CANNON-1`, animal: Animal.X_CANNON, player: Player.BLUE };
+  board[7][7] = { id: `BLUE-X_CANNON-2`, animal: Animal.X_CANNON, player: Player.BLUE };
+
+  // Soldiers
+  for (let i = 0; i < 9; i += 2) {
+    board[3][i] = { id: `RED-X_SOLDIER-${i}`, animal: Animal.X_SOLDIER, player: Player.RED };
+    board[6][i] = { id: `BLUE-X_SOLDIER-${i}`, animal: Animal.X_SOLDIER, player: Player.BLUE };
+  }
+
+  return board;
 };
 
 const createInitialArmyChessBoard = (): (Piece | null)[][] => {
-  return Array(12).fill(null).map(() => Array(5).fill(null));
+  const board: (Piece | null)[][] = Array(12).fill(null).map(() => Array(5).fill(null));
+  
+  const setupSide = (startRow: number, player: Player) => {
+    const pieces = [
+      Animal.A_MARSHAL, Animal.A_GENERAL, Animal.A_LIEUTENANT_GENERAL, Animal.A_LIEUTENANT_GENERAL,
+      Animal.A_BRIGADIER, Animal.A_BRIGADIER, Animal.A_COLONEL, Animal.A_COLONEL,
+      Animal.A_MAJOR, Animal.A_MAJOR, Animal.A_CAPTAIN, Animal.A_CAPTAIN, Animal.A_CAPTAIN,
+      Animal.A_LIEUTENANT, Animal.A_LIEUTENANT, Animal.A_LIEUTENANT,
+      Animal.A_ENGINEER, Animal.A_ENGINEER, Animal.A_ENGINEER,
+      Animal.A_BOMB, Animal.A_BOMB, Animal.A_MINE, Animal.A_MINE, Animal.A_MINE, Animal.A_FLAG
+    ];
+    
+    const shuffled = shuffle(pieces);
+    let idx = 0;
+    for (let r = 0; r < 5; r++) {
+      for (let c = 0; c < 5; c++) {
+        const actualRow = player === Player.RED ? r : 11 - r;
+        // Skip camp positions (Simplified: don't put pieces in camps at start)
+        const isCamp = (r === 2 && (c === 1 || c === 3)) || (r === 3 && c === 2) || (r === 4 && (c === 1 || c === 3));
+        if (!isCamp && idx < shuffled.length) {
+          board[actualRow][c] = { id: `${player}-A-${idx}`, animal: shuffled[idx], player };
+          idx++;
+        }
+      }
+    }
+  };
+
+  setupSide(0, Player.RED);
+  setupSide(7, Player.BLUE);
+
+  return board;
 };
 
 const createInitialLadderSnakeBoard = (): (Piece | null)[][] => {
-  return Array(10).fill(null).map(() => Array(10).fill(null));
+  const board: (Piece | null)[][] = Array(10).fill(null).map(() => Array(10).fill(null));
+  board[9][0] = { id: 'RED-RUNNER', animal: Animal.DOG, player: Player.RED };
+  board[9][9] = { id: 'BLUE-RUNNER', animal: Animal.CAT, player: Player.BLUE };
+  return board;
 };
 
 export default function App() {
@@ -134,21 +198,139 @@ export default function App() {
   const [selectedPiece, setSelectedPiece] = useState<Position | null>(null);
   const [isRulesOpen, setIsRulesOpen] = useState(false);
   const [isAIVsHuman, setIsAIVsHuman] = useState(true);
+  const [diceValue, setDiceValue] = useState(1);
+  const [isRolling, setIsRolling] = useState(false);
+  const [isSoundOn, setIsSoundOn] = useState(false);
+
+  // Initialize sound state in service
+  useEffect(() => {
+    setSoundEnabled(isSoundOn);
+  }, [isSoundOn]);
 
   // AI Turn Handling
   useEffect(() => {
     if (isAIVsHuman && currentPlayer === Player.BLUE) {
       const timer = setTimeout(async () => {
-        const move = await getAIMove(board, currentPlayer, gameType, aiDifficulty);
-        if (move) {
-          handleMove(move.from, move.to);
+        if (gameType === GameType.LADDER_SNAKE) {
+          handleRollDice();
         } else {
-          setCurrentPlayer(Player.RED);
+          const move = await getAIMove(board, currentPlayer, gameType, aiDifficulty);
+          if (move) {
+            handleMove(move.from, move.to);
+          } else {
+            setCurrentPlayer(Player.RED);
+          }
         }
       }, 1000);
       return () => clearTimeout(timer);
     }
-  }, [currentPlayer, board]);
+  }, [currentPlayer, board, gameType]);
+
+  const handleRollDice = async () => {
+    if (isRolling) return;
+    setIsRolling(true);
+    
+    // Simulate roll animation
+    await new Promise(resolve => setTimeout(resolve, 800));
+    
+    const roll = Math.floor(Math.random() * 6) + 1;
+    setDiceValue(roll);
+    setIsRolling(false);
+    
+    moveLadderSnake(roll);
+  };
+
+  const moveLadderSnake = async (steps: number) => {
+    // Find current piece position
+    let currentPos: Position | null = null;
+    for (let r = 0; r < 10; r++) {
+      for (let c = 0; c < 10; c++) {
+        if (board[r][c]?.player === currentPlayer) {
+          currentPos = { row: r, col: c };
+          break;
+        }
+      }
+    }
+    
+    if (!currentPos) return;
+    
+    const currentSquare = getSquareForPosition(currentPos.row, currentPos.col);
+    let targetSquare = currentSquare + steps;
+    
+    // Win condition: must reach 100
+    if (targetSquare > 100) {
+      targetSquare = 100 - (targetSquare - 100); // Bounce back? or just don't move? 
+      // Simple logic: don't move if it exceeds 100
+      // targetSquare = currentSquare; 
+    }
+
+    if (targetSquare < 1) targetSquare = 1;
+
+    // Execute move
+    await executeMoveLadderSnake(targetSquare);
+  };
+
+  const executeMoveLadderSnake = async (targetSquare: number) => {
+    // Find current piece to move
+    let currentPos: Position | null = null;
+    let piece: Piece | null = null;
+    for (let r = 0; r < 10; r++) {
+      for (let c = 0; c < 10; c++) {
+        if (board[r][c]?.player === currentPlayer) {
+          currentPos = { row: r, col: c };
+          piece = board[r][c];
+          break;
+        }
+      }
+    }
+    
+    if (!currentPos || !piece) return;
+
+    const newBoard = board.map(r => [...r]);
+    newBoard[currentPos.row][currentPos.col] = null;
+    
+    const finalPos = getPositionForSquare(targetSquare);
+    
+    // Check for another piece in that spot (PvP)
+    // In Snake & Ladder, multiple pieces can be on same spot? 
+    // Usually yes, but for this simple board, let's bump the other piece?
+    // Let's just allow overlap if I had multiple pieces, but here we only have 1 piece per cell.
+    // If target cell has opponent, we can move the opponent slightly? 
+    // For now, let's just replace visual and handle logic simply.
+    
+    newBoard[finalPos.row][finalPos.col] = piece;
+    setBoard(newBoard);
+    playMoveSound();
+
+    // Check for Snake or Ladder jump
+    if (LADDER_SNAKE_MAP[targetSquare]) {
+      await new Promise(resolve => setTimeout(resolve, 500));
+      const jumpSquare = LADDER_SNAKE_MAP[targetSquare];
+      const jumpPos = getPositionForSquare(jumpSquare);
+      
+      const jumpedBoard = newBoard.map(r => [...r]);
+      jumpedBoard[finalPos.row][finalPos.col] = null;
+      jumpedBoard[jumpPos.row][jumpPos.col] = piece;
+      setBoard(jumpedBoard);
+      
+      if (jumpSquare > targetSquare) {
+         // Ladder
+         console.log("Climbed a ladder!");
+      } else {
+         // Snake
+         console.log("Slid down a snake!");
+      }
+      playMoveSound();
+
+      if (jumpSquare === 100) {
+        alert(`${currentPlayer} wins!`);
+      }
+    } else if (targetSquare === 100) {
+      alert(`${currentPlayer} wins!`);
+    }
+
+    setCurrentPlayer(currentPlayer === Player.RED ? Player.BLUE : Player.RED);
+  };
 
   const handleMove = (from: Position, to: Position) => {
     const piece = board[from.row][from.col];
@@ -167,11 +349,18 @@ export default function App() {
         playMoveSound();
       }
       
-      // Promotion check
-      const opponentDen = DEN_POSITIONS[piece.player === Player.RED ? 'BLUE' : 'RED'];
-      if (to.row === opponentDen.row && to.col === opponentDen.col) {
-        piece.animal = Animal.ELEPHANT;
-        console.log(`Piece promoted to ${piece.animal}!`);
+      // Win conditions
+      if (gameType === GameType.XIANGQI && targetPiece?.animal === Animal.X_GENERAL) {
+         alert(`${piece.player} Wins! The Enemy General has fallen.`);
+      }
+      if (gameType === GameType.ARMY_CHESS && targetPiece?.animal === Animal.A_FLAG) {
+         alert(`${piece.player} Wins! The Enemy Flag has been captured.`);
+      }
+      if (gameType === GameType.JUNGLE || gameType === GameType.ZODIAC) {
+        const opponentDen = DEN_POSITIONS[piece.player === Player.RED ? 'BLUE' : 'RED'];
+        if (to.row === opponentDen.row && to.col === opponentDen.col) {
+          alert(`${piece.player} Wins! Enemy Den reached.`);
+        }
       }
       
       newBoard[to.row][to.col] = piece;
@@ -196,6 +385,7 @@ export default function App() {
 
   const handleCellClick = (row: number, col: number) => {
     if (currentPlayer === Player.BLUE && isAIVsHuman) return;
+    if (gameType === GameType.LADDER_SNAKE) return;
 
     const piece = board[row][col];
     
@@ -305,6 +495,18 @@ export default function App() {
               ))}
             </div>
           )}
+
+          <button 
+            onClick={() => setIsSoundOn(!isSoundOn)}
+            className={`p-3 rounded-xl border transition-all ${
+              isSoundOn 
+                ? 'bg-amber-500/10 border-amber-500/30 text-amber-500 shadow-[0_0_15px_rgba(245,158,11,0.2)]' 
+                : 'bg-neutral-800 border-neutral-700 text-neutral-500 hover:bg-neutral-700'
+            }`}
+            title={isSoundOn ? "Disable Sound" : "Enable Sound"}
+          >
+            {isSoundOn ? <Volume2 size={20} /> : <VolumeX size={20} />}
+          </button>
         </div>
       </div>
       
@@ -318,6 +520,17 @@ export default function App() {
         {currentPlayer === Player.RED ? 'RED (Top)' : 'BLUE (Bottom)'}'s Turn
       </div>
       
+      {gameType === GameType.LADDER_SNAKE && (
+        <div className="mb-8">
+          <Dice 
+            value={diceValue} 
+            isRolling={isRolling} 
+            onRoll={handleRollDice} 
+            disabled={isAIVsHuman && currentPlayer === Player.BLUE}
+          />
+        </div>
+      )}
+
       <BoardComponent 
         board={board} 
         onCellClick={handleCellClick} 

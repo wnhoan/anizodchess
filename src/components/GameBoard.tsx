@@ -1,8 +1,13 @@
 import React, { ElementType } from 'react';
-import { Mouse, Cat, Dog, Sparkle, Zap, Crown, Circle, Bird, Flame, Smile, Move, Ghost, Rabbit, Rat } from 'lucide-react';
+import { 
+  Mouse, Cat, Dog, Sparkle, Zap, Crown, Circle, Bird, Flame, Smile, Move, Ghost, Rabbit, Rat,
+  Flag, Shield, Swords, Target, User, Users, Anchor, Bomb, Construction, Trophy,
+  CircleDot
+} from 'lucide-react';
 import { Piece, Player, Animal, Position, GameType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { RIVER_POSITIONS, TRAP_POSITIONS, DEN_POSITIONS } from '../constants';
+import { getSquareForPosition, LADDER_SNAKE_MAP } from '../snakeLadderConstants';
 
 const AnimalIconMap: Record<Animal, ElementType> = {
   [Animal.MOUSE]: Mouse,
@@ -24,6 +29,29 @@ const AnimalIconMap: Record<Animal, ElementType> = {
   [Animal.MONKEY]: Smile,
   [Animal.ROOSTER]: Bird,
   [Animal.PIG]: Cat,
+
+  // Xiangqi Pieces
+  [Animal.X_GENERAL]: Trophy,
+  [Animal.X_ADVISOR]: User,
+  [Animal.X_ELEPHANT]: CircleDot,
+  [Animal.X_HORSE]: Move,
+  [Animal.X_CHARIOT]: Swords,
+  [Animal.X_CANNON]: Target,
+  [Animal.X_SOLDIER]: Users,
+
+  // Army Chess Pieces
+  [Animal.A_MARSHAL]: Crown,
+  [Animal.A_GENERAL]: Swords,
+  [Animal.A_LIEUTENANT_GENERAL]: Shield,
+  [Animal.A_BRIGADIER]: Anchor,
+  [Animal.A_COLONEL]: Target,
+  [Animal.A_MAJOR]: User,
+  [Animal.A_CAPTAIN]: Users,
+  [Animal.A_LIEUTENANT]: User,
+  [Animal.A_ENGINEER]: Construction,
+  [Animal.A_BOMB]: Bomb,
+  [Animal.A_MINE]: Zap,
+  [Animal.A_FLAG]: Flag,
 };
 
 interface BoardProps {
@@ -109,6 +137,9 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
           }
 
           const IconComponent = piece ? AnimalIconMap[piece.animal] : null;
+          const squareNumber = gameType === GameType.LADDER_SNAKE ? getSquareForPosition(r, c) : null;
+          const isShortcut = squareNumber && LADDER_SNAKE_MAP[squareNumber];
+          const isUp = isShortcut && LADDER_SNAKE_MAP[squareNumber]! > squareNumber!;
 
           return (
             <motion.div
@@ -120,6 +151,20 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
                   selectedPosition?.row === r && selectedPosition?.col === c ? 'ring-4 ring-yellow-400' : ''
                 }`}
             >
+              {/* Square Numbers for Snakes & Ladders */}
+              {squareNumber && (
+                <span className="absolute top-0.5 left-1 text-[8px] font-mono font-bold text-neutral-800/40">
+                  {squareNumber}
+                </span>
+              )}
+
+              {/* Shortcut Hints */}
+              {isShortcut && (
+                <div className={`absolute bottom-0.5 right-1 ${isUp ? 'text-emerald-600' : 'text-red-500'} opacity-60`}>
+                  {isUp ? <Move size={10} className="-rotate-45" /> : <Move size={10} className="rotate-135" />}
+                </div>
+              )}
+              
               {/* Special markers */}
               {gameType === GameType.JUNGLE && !piece && isDen(r, c, Player.RED) && <Crown className="absolute opacity-20 text-red-100" size={20} />}
               {gameType === GameType.JUNGLE && !piece && isDen(r, c, Player.BLUE) && <Crown className="absolute opacity-20 text-blue-100" size={20} />}
@@ -142,9 +187,16 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
                       damping: 25,
                       exit: { duration: 0.3 }
                     }}
-                    className={`${piece.player === Player.RED ? 'text-red-600' : 'text-blue-600'} ${piece.player === currentPlayer ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''} z-10`}
+                    className={`${piece.player === Player.RED ? 'text-red-600' : 'text-blue-600'} ${piece.player === currentPlayer ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''} z-10 
+                      ${gameType === GameType.XIANGQI ? 'bg-amber-100 rounded-full border-2 border-amber-900 p-1 w-8 h-8 flex items-center justify-center' : ''}
+                      ${gameType === GameType.ARMY_CHESS ? 'bg-neutral-800 rounded-md border border-neutral-600 p-1 w-8 h-10 flex flex-col items-center justify-center' : ''}`}
                   >
-                    <IconComponent size={20} />
+                    <IconComponent size={gameType === GameType.ARMY_CHESS ? 16 : 20} />
+                    {gameType === GameType.ARMY_CHESS && (
+                      <span className="text-[8px] font-bold mt-0.5 leading-none opacity-80 uppercase">
+                        {piece.animal.replace('A_', '').split('_')[0]}
+                      </span>
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>

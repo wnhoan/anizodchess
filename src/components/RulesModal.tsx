@@ -97,8 +97,9 @@ export default function RulesModal({ isOpen, onClose, mode = GameType.JUNGLE }: 
                     </>
                   ) : isLadderSnake ? (
                     <>
-                      <li>Race to the final square!</li>
+                      <li>Roll the dice to move your piece.</li>
                       <li className="text-amber-300 font-medium">Ladders take you up, Snakes bring you down.</li>
+                      <li>Reach square 100 exactly to win!</li>
                     </>
                   ) : (
                     <>

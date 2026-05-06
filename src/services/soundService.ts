@@ -26,7 +26,16 @@ const ANIMAL_SOUNDS: Partial<Record<Animal, string>> = {
 const MOVE_SOUND = 'https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'; // Swoosh
 const CAPTURE_SOUND = 'https://assets.mixkit.co/active_storage/sfx/1110/1110-preview.mp3'; // Strike
 
+let soundEnabled = false;
+
+export const setSoundEnabled = (enabled: boolean) => {
+  soundEnabled = enabled;
+};
+
+export const isSoundPlaying = () => soundEnabled;
+
 export const playAnimalSound = (animal: Animal) => {
+  if (!soundEnabled) return;
   const url = ANIMAL_SOUNDS[animal];
   if (url) {
     const audio = new Audio(url);
@@ -36,12 +45,14 @@ export const playAnimalSound = (animal: Animal) => {
 };
 
 export const playMoveSound = () => {
+  if (!soundEnabled) return;
   const audio = new Audio(MOVE_SOUND);
   audio.volume = 0.2;
   audio.play().catch(e => console.log('Audio playback prevented', e));
 };
 
 export const playCaptureSound = () => {
+  if (!soundEnabled) return;
   const audio = new Audio(CAPTURE_SOUND);
   audio.volume = 0.5;
   audio.play().catch(e => console.log('Audio playback prevented', e));
