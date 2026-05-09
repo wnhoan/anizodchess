@@ -5,8 +5,9 @@
 
 import { useState, useEffect } from 'react';
 import { Player, Piece, Animal, Position, GameType, AIDifficulty } from './types';
-import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu, Volume2, VolumeX } from 'lucide-react';
-import { motion } from 'motion/react';
+import { Crown, Cat, RefreshCw, LayoutGrid, Users, Cpu, Volume2, VolumeX, Trophy } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import confetti from 'canvas-confetti';
 import BoardComponent from './components/GameBoard';
 import RulesModal from './components/RulesModal';
 import CapturedPieces from './components/CapturedPieces';
@@ -228,6 +229,9 @@ export default function App() {
   const [isSoundOn, setIsSoundOn] = useState(false);
   const [playerPositions, setPlayerPositions] = useState<Record<Player, number>>({ [Player.RED]: 1, [Player.BLUE]: 100 }); // BLUE starts at 100 or 1? Usually both start at 1. Wait, let's look at initial board.
   const [prevPlayerPositions, setPrevPlayerPositions] = useState<Record<Player, number>>({ [Player.RED]: 1, [Player.BLUE]: 1 });
+  const [gameSeed, setGameSeed] = useState(Math.random());
+  const [winner, setWinner] = useState<Player | null>(null);
+  const [shortcutMsg, setShortcutMsg] = useState<string | null>(null);
 
   // Initialize sound state in service
   useEffect(() => {
@@ -366,22 +370,31 @@ export default function App() {
       setBoard(jumpedBoard);
       
       if (jumpSquare > targetSquare) {
-         // Ladder
-         console.log("Climbed a ladder!");
+         setShortcutMsg("LADDER CLIMBED!");
       } else {
-         // Snake
-         console.log("Slid down a snake!");
+         setShortcutMsg("SNAKE SLITHERED...");
       }
+      setTimeout(() => setShortcutMsg(null), 1500);
       playMoveSound();
 
       if (jumpSquare === 100) {
-        alert(`${currentPlayer} wins!`);
+        triggerWin(currentPlayer);
       }
     } else if (targetSquare === 100) {
-      alert(`${currentPlayer} wins!`);
+      triggerWin(currentPlayer);
     }
 
     setCurrentPlayer(currentPlayer === Player.RED ? Player.BLUE : Player.RED);
+  };
+
+  const triggerWin = (player: Player) => {
+    setWinner(player);
+    confetti({
+      particleCount: 150,
+      spread: 70,
+      origin: { y: 0.6 },
+      colors: player === Player.RED ? ['#ef4444', '#f59e0b', '#7f1d1d'] : ['#3b82f6', '#1e40af', '#1e3a8a']
+    });
   };
 
   const handleMove = (from: Position, to: Position) => {
@@ -403,18 +416,18 @@ export default function App() {
       
       // Win conditions
       if (gameType === GameType.XIANGQI && targetPiece?.animal === Animal.X_GENERAL) {
-         alert(`${piece.player} Wins! The Enemy General has fallen.`);
+         triggerWin(piece.player);
       }
       if (gameType === GameType.CHESS && targetPiece?.animal === Animal.C_KING) {
-         alert(`${piece.player} Wins! Checkmate. The King has been captured.`);
+         triggerWin(piece.player);
       }
       if (gameType === GameType.ARMY_CHESS && targetPiece?.animal === Animal.A_FLAG) {
-         alert(`${piece.player} Wins! The Enemy Flag has been captured.`);
+         triggerWin(piece.player);
       }
       if (gameType === GameType.JUNGLE || gameType === GameType.ZODIAC) {
         const opponentDen = DEN_POSITIONS[piece.player === Player.RED ? 'BLUE' : 'RED'];
         if (to.row === opponentDen.row && to.col === opponentDen.col) {
-          alert(`${piece.player} Wins! Enemy Den reached.`);
+          triggerWin(piece.player);
         }
       }
       
@@ -490,6 +503,9 @@ export default function App() {
     setSelectedPiece(null);
     setCurrentPlayer(Player.RED);
     setPrevPlayerPositions({ [Player.RED]: 1, [Player.BLUE]: 100 }); // Default starting spots
+    setGameSeed(Math.random());
+    setWinner(null);
+    setShortcutMsg(null);
   };
 
   const toggleGameType = () => {
@@ -511,6 +527,9 @@ export default function App() {
     setSelectedPiece(null);
     setCurrentPlayer(Player.RED);
     setPrevPlayerPositions({ [Player.RED]: 1, [Player.BLUE]: 100 });
+    setGameSeed(Math.random());
+    setWinner(null);
+    setShortcutMsg(null);
   };
 
   return (
@@ -595,21 +614,29 @@ export default function App() {
       </div>
       
       {gameType === GameType.LADDER_SNAKE && (
-        <div className="mb-8">
+        <div className="mb-8 relative h-20 flex items-center justify-center">
+          <AnimatePresence>
+            {shortcutMsg && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.5, y: 20 }}
+                animate={{ opacity: 1, scale: 1.2, y: 0 }}
+                exit={{ opacity: 0, scale: 1.5, y: -50 }}
+                className={`absolute font-black text-3xl italic tracking-tighter drop-shadow-lg z-50 ${shortcutMsg.includes('LADDER') ? 'text-emerald-400' : 'text-red-400'}`}
+              >
+                {shortcutMsg}
+              </motion.div>
+            )}
+          </AnimatePresence>
           <Dice 
             value={diceValue} 
             isRolling={isRolling} 
             onRoll={handleRollDice} 
-            disabled={isAIVsHuman && currentPlayer === Player.BLUE}
+            disabled={(isAIVsHuman && currentPlayer === Player.BLUE) || !!winner}
           />
         </div>
       )}
 
-      <motion.div 
-        animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
-        transition={{ duration: 0.8, type: 'spring', stiffness: 50 }}
-        className="relative shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-3xl overflow-hidden"
-      >
+      <div className="relative shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-3xl overflow-hidden group">
         <BoardComponent 
           board={board} 
           onCellClick={handleCellClick} 
@@ -617,8 +644,42 @@ export default function App() {
           selectedPosition={selectedPiece}
           validMoves={validMoves}
           gameType={gameType}
+          gameSeed={gameSeed}
         />
-      </motion.div>
+
+        {/* Winner Overlay */}
+        <AnimatePresence>
+          {winner && (
+            <motion.div
+              initial={{ opacity: 0, backdropFilter: 'blur(0px)' }}
+              animate={{ opacity: 1, backdropFilter: 'blur(8px)' }}
+              className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 pointer-events-auto"
+            >
+              <motion.div
+                initial={{ scale: 0.5, opacity: 0, rotate: -20 }}
+                animate={{ scale: 1, opacity: 1, rotate: 0 }}
+                className="bg-neutral-800 p-12 rounded-3xl border-4 border-amber-500 shadow-2xl flex flex-col items-center gap-6"
+              >
+                <div className={`w-24 h-24 rounded-full flex items-center justify-center shadow-inner ${winner === Player.RED ? 'bg-red-500' : 'bg-blue-500'}`}>
+                   <Trophy size={48} className="text-white" />
+                </div>
+                <div className="text-center">
+                  <h2 className="text-5xl font-black text-white uppercase tracking-tighter mb-2">Victory!</h2>
+                  <p className={`text-2xl font-bold uppercase ${winner === Player.RED ? 'text-red-400' : 'text-blue-400'}`}>
+                    {winner} Player Wins
+                  </p>
+                </div>
+                <button
+                  onClick={resetGame}
+                  className="mt-4 px-10 py-4 bg-amber-500 hover:bg-amber-400 text-neutral-900 font-black rounded-2xl shadow-xl transition-all active:scale-95 uppercase tracking-widest text-xl"
+                >
+                  Play Again
+                </button>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
       
       <CapturedPieces pieces={capturedPieces} />
       

@@ -8,7 +8,7 @@ import {
 import { Piece, Player, Animal, Position, GameType } from '../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { RIVER_POSITIONS, TRAP_POSITIONS, DEN_POSITIONS } from '../constants';
-import { getSquareForPosition, LADDER_SNAKE_MAP } from '../snakeLadderConstants';
+import { getSquareForPosition, getPositionForSquare, LADDER_SNAKE_MAP } from '../snakeLadderConstants';
 
 const AnimalIconMap: Record<Animal, ElementType> = {
   [Animal.MOUSE]: Mouse,
@@ -70,9 +70,10 @@ interface BoardProps {
   selectedPosition: Position | null;
   validMoves?: Position[];
   gameType: GameType;
+  gameSeed?: number;
 }
 
-export default function Board({ board, onCellClick, currentPlayer, selectedPosition, validMoves = [], gameType }: BoardProps) {
+export default function Board({ board, onCellClick, currentPlayer, selectedPosition, validMoves = [], gameType, gameSeed = 0 }: BoardProps) {
   const isRiver = (r: number, c: number) => RIVER_POSITIONS.some(p => p.row === r && p.col === c);
   const isTrap = (r: number, c: number) => TRAP_POSITIONS.some(p => p.row === r && p.col === c);
   const isDen = (r: number, c: number, p: Player) => DEN_POSITIONS[p].row === r && DEN_POSITIONS[p].col === c;
@@ -81,13 +82,156 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
   const rows = board.length;
   const cols = board[0]?.length || 0;
 
+  const renderShortcuts = () => {
+    if (gameType !== GameType.LADDER_SNAKE) return null;
+
+    return (
+      <svg 
+        className="absolute inset-0 pointer-events-none z-10" 
+        width="100%" 
+        height="100%" 
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="ladderGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#fbbf24" />
+            <stop offset="100%" stopColor="#d97706" />
+          </linearGradient>
+           <filter id="glow">
+            <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+            <feMerge>
+                <feMergeNode in="coloredBlur"/>
+                <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+        {Object.entries(LADDER_SNAKE_MAP).map(([start, end]) => {
+          const sNum = parseInt(start);
+          const sPos = getPositionForSquare(sNum);
+          const ePos = getPositionForSquare(end);
+          const isLadder = end > sNum;
+
+          // Stable visual seeds based on positions
+          const visualSeed = (sNum * 123.45) + (end * 67.89);
+          const hue = Math.floor(visualSeed % 360);
+
+          // Convert grid coords to viewBox (0-100) coords
+          const x1 = (sPos.col + 0.5) * (100 / cols);
+          const y1 = (sPos.row + 0.5) * (100 / rows);
+          const x2 = (ePos.col + 0.5) * (100 / cols);
+          const y2 = (ePos.row + 0.5) * (100 / rows);
+
+          if (isLadder) {
+            // Draw a ladder
+            const dx = x2 - x1;
+            const dy = y2 - y1;
+            const angle = Math.atan2(dy, dx);
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            const width = 2.5;
+            const offset = width / 2;
+            
+            // Perpendicular vector for side rails
+            const px = Math.sin(angle) * offset;
+            const py = -Math.cos(angle) * offset;
+
+            const rungs = Math.floor(dist / 4);
+            const rungElements = [];
+            for (let i = 1; i < rungs; i++) {
+              const t = i / rungs;
+              const tx = x1 + dx * t;
+              const ty = y1 + dy * t;
+              rungElements.push(
+                <line 
+                  key={`rung-${sNum}-${i}`}
+                  x1={tx + px} y1={ty + py} 
+                  x2={tx - px} y2={ty - py} 
+                  stroke={`hsl(${hue}, 70%, 30%)`} 
+                  strokeWidth="0.8" 
+                />
+              );
+            }
+
+            return (
+              <g key={`shortcut-${sNum}`} className="opacity-80" filter="url(#glow)">
+                <line x1={x1 + px} y1={y1 + py} x2={x2 + px} y2={y2 + py} stroke={`hsl(${hue}, 80%, 50%)`} strokeWidth="1.2" strokeLinecap="round" />
+                <line x1={x1 - px} y1={y1 - py} x2={x2 - px} y2={y2 - py} stroke={`hsl(${hue}, 80%, 50%)`} strokeWidth="1.2" strokeLinecap="round" />
+                {rungElements}
+              </g>
+            );
+          } else {
+            // Draw a snake
+            const idHash = sNum * 123.456;
+            const offsetDist = 8 + (Math.sin(idHash) * 10);
+            const mx = (x1 + x2) / 2 + (Math.sin(idHash) * offsetDist);
+            const my = (y1 + y2) / 2 + (Math.cos(idHash) * offsetDist);
+            
+            // Calculate angle for head and tail
+            const angleHead = Math.atan2(y1 - my, x1 - mx);
+            const angleTail = Math.atan2(y2 - my, x2 - mx);
+
+            return (
+              <g key={`shortcut-${sNum}`} className="opacity-90" filter="url(#glow)">
+                {/* Shadow/Glow underbody */}
+                <path 
+                  d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`} 
+                  fill="none" 
+                  stroke={`hsl(${hue}, 80%, 20%)`} 
+                  strokeWidth="4" 
+                  strokeLinecap="round"
+                  className="opacity-40"
+                />
+                {/* Main Body */}
+                <path 
+                  d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`} 
+                  fill="none" 
+                  stroke={`hsl(${hue}, 80%, 45%)`} 
+                  strokeWidth="3.2" 
+                  strokeLinecap="round"
+                />
+                {/* Pattern/Highlights */}
+                <path 
+                  d={`M ${x1} ${y1} Q ${mx} ${my} ${x2} ${y2}`} 
+                  fill="none" 
+                  stroke="white" 
+                  strokeWidth="1.2" 
+                  strokeLinecap="round"
+                  strokeDasharray="2 6"
+                  className="opacity-40"
+                />
+                
+                {/* Snake Head (at start position - where player slides from) */}
+                <g transform={`translate(${x1}, ${y1}) rotate(${angleHead * 180 / Math.PI + 90})`}>
+                  <ellipse cx="0" cy="0" rx="3.5" ry="4.5" fill={`hsl(${hue}, 80%, 40%)`} />
+                  <circle cx="-1.2" cy="-1.5" r="0.8" fill="white" />
+                  <circle cx="1.2" cy="-1.5" r="0.8" fill="white" />
+                  <circle cx="-1.2" cy="-1.7" r="0.3" fill="black" />
+                  <circle cx="1.2" cy="-1.7" r="0.3" fill="black" />
+                  {/* Tongue */}
+                  <path d="M 0 -4.5 L -0.5 -6 M 0 -4.5 L 0.5 -6" stroke="#ef4444" strokeWidth="0.5" fill="none" />
+                </g>
+
+                {/* Snake Tail (at end position - where player lands) */}
+                <g transform={`translate(${x2}, ${y2}) rotate(${angleTail * 180 / Math.PI - 90})`}>
+                  <path d="M -2 0 L 2 0 L 0 5 Z" fill={`hsl(${hue}, 80%, 35%)`} />
+                </g>
+              </g>
+            );
+          }
+        })}
+      </svg>
+    );
+  };
+
   return (
-    <div 
-      className="bg-neutral-800 p-2 rounded-lg shadow-2xl border-4 border-amber-900 grid gap-1"
-      style={{
-        gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`
-      }}
-    >
+    <div className="relative">
+      {renderShortcuts()}
+      <div 
+        className="bg-neutral-800 p-2 rounded-lg shadow-2xl border-4 border-amber-900 grid gap-1"
+        style={{
+          gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`
+        }}
+      >
       {board.map((row, r) =>
         row.map((piece, c) => {
           let bgColor = 'bg-emerald-800'; 
@@ -152,34 +296,36 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
           const isShortcut = squareNumber && LADDER_SNAKE_MAP[squareNumber];
           const isUp = isShortcut && LADDER_SNAKE_MAP[squareNumber]! > squareNumber!;
 
+          // Generate unique physical variation based on piece ID and game seed
+          const idHash = piece ? piece.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0) : 0;
+          const visualSeed = (idHash + Math.floor(gameSeed * 1000));
+          const randomTiltX = piece ? (visualSeed % 14) - 7 : 0;
+          const randomTiltY = piece ? ((visualSeed / 3) % 14) - 7 : 0;
+          const randomRotate = piece ? (visualSeed % 24) - 12 : 0;
+
           return (
             <motion.div
+              layout
               key={`${r}-${c}`}
               onClick={() => onCellClick(r, c)}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className={`relative w-10 h-10 md:w-12 md:h-12 ${bgColor} flex items-center justify-center rounded cursor-pointer ${
-                  selectedPosition?.row === r && selectedPosition?.col === c ? 'ring-4 ring-yellow-400' : ''
+                  selectedPosition?.row === r && selectedPosition?.col === c ? 'ring-4 ring-yellow-400 z-30' : ''
                 }`}
             >
               {/* Square Numbers for Snakes & Ladders */}
               {squareNumber && (
-                <motion.span 
-                  animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
-                  className="absolute top-0.5 left-1 text-[8px] font-mono font-bold text-neutral-800/40"
-                >
+                <span className="absolute top-0.5 left-1 text-[8px] font-mono font-bold text-neutral-800/40">
                   {squareNumber}
-                </motion.span>
+                </span>
               )}
 
               {/* Shortcut Hints */}
               {isShortcut && (
-                <motion.div 
-                  animate={{ rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0 }}
-                  className={`absolute bottom-0.5 right-1 ${isUp ? 'text-emerald-600' : 'text-red-500'} opacity-60`}
-                >
+                <div className={`absolute bottom-0.5 right-1 ${isUp ? 'text-emerald-600' : 'text-red-500'} opacity-60`}>
                   {isUp ? <Move size={10} className="-rotate-45" /> : <Move size={10} className="rotate-135" />}
-                </motion.div>
+                </div>
               )}
               
               {/* Special markers */}
@@ -190,35 +336,62 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
                 {piece && IconComponent && (
                   <motion.div
                     layoutId={piece.id}
-                    initial={{ opacity: 0, scale: 0.5, y: -20 }}
+                    initial={{ opacity: 0, scale: 0.5, y: -40 }}
                     animate={{ 
                       opacity: 1, 
-                      scale: piece.player === currentPlayer ? 1.1 : 1, 
+                      scale: piece.player === currentPlayer ? 1.15 : 1, 
                       y: 0,
-                      rotate: gameType === GameType.LADDER_SNAKE && currentPlayer === Player.BLUE ? 180 : 0
+                      rotate: randomRotate,
+                      rotateX: randomTiltX,
+                      rotateY: randomTiltY,
+                      z: piece.player === currentPlayer ? 30 : 0
+                    }}
+                    whileHover={{ 
+                      scale: 1.25, 
+                      rotateX: 10,
+                      rotateY: 10,
+                      filter: 'brightness(1.15) contrast(1.1)',
+                      z: 60,
+                      transition: { duration: 0.2 }
                     }}
                     exit={{ 
                       opacity: 0, 
-                      scale: 2,
+                      scale: 2.5,
                       rotate: 180,
-                      filter: "brightness(2) blur(8px)",
+                      y: -100,
+                      filter: "brightness(2) blur(12px)",
                     }}
                     transition={{ 
                       type: "spring", 
-                      stiffness: 400, 
-                      damping: 25,
+                      stiffness: 450, 
+                      damping: 30,
                       exit: { duration: 0.3 }
                     }}
-                    className={`${piece.player === Player.RED ? 'text-red-600' : 'text-blue-600'} ${piece.player === currentPlayer ? 'drop-shadow-[0_0_8px_rgba(255,255,255,0.8)]' : ''} z-10 
-                      ${gameType === GameType.XIANGQI ? 'bg-amber-100 rounded-full border-2 border-amber-900 p-1 w-8 h-8 flex items-center justify-center' : ''}
-                      ${gameType === GameType.ARMY_CHESS ? 'bg-neutral-800 rounded-md border border-neutral-600 p-1 w-8 h-10 flex flex-col items-center justify-center' : ''}`}
+                    className={`relative z-20 w-8 h-8 md:w-10 md:h-10 rounded-full flex flex-col items-center justify-center
+                      shadow-[0_6px_0_0_rgba(0,0,0,0.3),0_12px_24px_-4px_rgba(0,0,0,0.5),inset_0_2px_4px_rgba(255,255,255,0.4)]
+                      perspective-500 transform-gpu transition-all duration-300
+                      ${piece.player === Player.RED 
+                        ? 'bg-linear-to-br from-red-400 via-red-600 to-red-900 text-white border-b-4 border-red-950/40' 
+                        : 'bg-linear-to-br from-blue-400 via-blue-600 to-blue-900 text-white border-b-4 border-blue-950/40'
+                      }
+                      ${piece.player === currentPlayer ? 'ring-2 ring-white/60 ring-offset-2 ring-offset-neutral-800' : ''}
+                      ${gameType === GameType.ARMY_CHESS ? 'rounded-lg h-10 w-8 md:h-11 md:w-9 sm:rounded-md' : ''}
+                    `}
                   >
-                    <IconComponent size={gameType === GameType.ARMY_CHESS ? 16 : 20} />
+                    <IconComponent 
+                      size={gameType === GameType.ARMY_CHESS ? 14 : 22} 
+                      className="drop-shadow-[0_2px_2px_rgba(0,0,0,0.5)] transition-transform group-hover:scale-110"
+                    />
                     {gameType === GameType.ARMY_CHESS && (
-                      <span className="text-[8px] font-bold mt-0.5 leading-none opacity-80 uppercase">
+                      <span className="text-[7px] font-black mt-0.5 leading-none opacity-90 uppercase tracking-tighter drop-shadow-sm">
                         {piece.animal.replace('A_', '').split('_')[0]}
                       </span>
                     )}
+                    
+                    {/* Realistic Glossy Highlight */}
+                    <div className="absolute top-1 left-2 w-3 h-1.5 bg-white/40 rounded-full blur-[1.5px] rotate-[-15deg] pointer-events-none" />
+                    {/* Bottom Rim Reflection */}
+                    <div className="absolute bottom-1 right-2 w-1.5 h-1 bg-white/10 rounded-full blur-[1px] pointer-events-none" />
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -232,6 +405,7 @@ export default function Board({ board, onCellClick, currentPlayer, selectedPosit
           );
         })
       )}
+    </div>
     </div>
   );
 }
